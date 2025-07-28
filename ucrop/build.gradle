@@ -1,11 +1,11 @@
 apply plugin: 'com.android.library'
-apply from: '../mavenpush.gradle'
 
 android {
-    compileSdk 33
+    namespace 'com.yalantis.ucrop'
+    compileSdk 34
     defaultConfig {
         minSdkVersion 14
-        targetSdkVersion 33
+        targetSdkVersion 34
         versionCode 27
         versionName "2.2.9-native"
 
@@ -31,6 +31,10 @@ android {
         jni.srcDirs = []
     }
 
+    buildFeatures {
+        buildConfig true
+    }
+
 }
 
 dependencies {
@@ -39,4 +43,6 @@ dependencies {
     implementation "androidx.transition:transition:${androidx_transition_version}"
     // OkHttp3 versions above 3.12.x don't support pre-Lollipop Android versions (API 21)
     implementation "com.squareup.okhttp3:okhttp:3.12.13"
+    implementation "androidx.activity:activity-ktx:1.8.2"
+    implementation "androidx.core:core-ktx:1.12.0"
 }

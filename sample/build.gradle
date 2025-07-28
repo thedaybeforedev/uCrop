@@ -1,15 +1,18 @@
-apply plugin: 'com.android.application'
-
+plugins {
+    id 'com.android.application'          // or 'com.android.library'
+    id 'org.jetbrains.kotlin.android'     // 쓴다면
+}
 android {
-    compileSdk 33
+    namespace 'com.yalantis.ucrop.sample'
+    compileSdk 34
     defaultConfig {
         applicationId "com.yalantis.ucrop.sample"
         minSdkVersion 14
-        targetSdkVersion 33
+        targetSdkVersion 34
         versionCode 13
         versionName "1.2.4"
     }
-    flavorDimensions "default"
+    flavorDimensions "mode"
     buildTypes {
         release {
             minifyEnabled false
@@ -23,14 +26,21 @@ android {
     lintOptions {
         abortOnError false
     }
+    buildFeatures {
+        buildConfig true
+    }
+
     productFlavors {
         activity {
-            buildConfigField("int","RequestMode", "1")
+            dimension "mode"
+            buildConfigField "int", "RequestMode", "1"
         }
-        fragment {
-            buildConfigField("int","RequestMode", "2")
+        camera {
+            dimension "mode"
+            buildConfigField "int", "RequestMode", "2"
         }
     }
+
 }
 
 dependencies {
@@ -39,4 +49,6 @@ dependencies {
     implementation "androidx.constraintlayout:constraintlayout:${constraintlayout_version}"
     implementation "com.squareup.okhttp3:okhttp:3.12.13"
     implementation project(':ucrop')
+    implementation "androidx.activity:activity-ktx:1.8.2"
+    implementation "androidx.core:core-ktx:1.12.0"
 }
