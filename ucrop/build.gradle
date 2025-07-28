@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'maven-publish'
 
 android {
     namespace 'com.yalantis.ucrop'
@@ -31,10 +32,31 @@ android {
         jni.srcDirs = []
     }
 
+    publishing {
+        singleVariant("release") {
+            // sourcesJar, javadocJar 등 추가하고 싶으면 활성화
+            withSourcesJar()
+            // withJavadocJar()
+        }
+    }
+
     buildFeatures {
         buildConfig true
     }
 
+}
+afterEvaluate {
+    publishing {
+        publications {
+            // 보통 Android 라이브러리는 'release' 컴포넌트를 사용합니다.
+            release(MavenPublication) {
+                groupId    = project.group
+                artifactId = project.name
+                version    = project.version
+                from components.release
+            }
+        }
+    }
 }
 
 dependencies {
