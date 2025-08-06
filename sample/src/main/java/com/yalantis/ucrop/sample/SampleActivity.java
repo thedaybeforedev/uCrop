@@ -3,6 +3,7 @@ package com.yalantis.ucrop.sample;
 import android.annotation.TargetApi;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Animatable;
 import android.graphics.drawable.Drawable;
@@ -25,6 +26,18 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
+import androidx.activity.SystemBarStyle;
+import androidx.annotation.ColorInt;
+import androidx.annotation.DrawableRes;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+
 import com.yalantis.ucrop.UCrop;
 import com.yalantis.ucrop.UCropActivity;
 import com.yalantis.ucrop.UCropFragment;
@@ -33,13 +46,6 @@ import com.yalantis.ucrop.UCropFragmentCallback;
 import java.io.File;
 import java.util.Locale;
 import java.util.Random;
-
-import androidx.annotation.ColorInt;
-import androidx.annotation.DrawableRes;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.widget.Toolbar;
-import androidx.core.content.ContextCompat;
 
 /**
  * Created by Oleksii Shliama (https://github.com/shliama).
@@ -74,13 +80,18 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
     private int mToolbarCropDrawable;
     // Enables dynamic coloring
     private int mToolbarColor;
-    private int mStatusBarColor;
     private int mToolbarWidgetColor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this, SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT), SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT));
         setContentView(R.layout.activity_sample);
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.settings), (view, windowInsets) -> {
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            view.setPaddingRelative(insets.left, insets.top, insets.right, insets.bottom);
+            return windowInsets;
+        });
         setupUI();
     }
 
@@ -222,7 +233,6 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
 
     private void startCrop(@NonNull Uri uri) {
         String destinationFileName = SAMPLE_CROPPED_IMAGE_NAME;
-
         int checkedId = mRadioGroupCompressionSettings.getCheckedRadioButtonId();
         if (checkedId == R.id.radio_png) {
             destinationFileName += ".png";
@@ -231,14 +241,16 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
         }
 
         UCrop uCrop = UCrop.of(uri, Uri.fromFile(new File(getCacheDir(), destinationFileName)));
+
         uCrop = basisConfig(uCrop);
         uCrop = advancedConfig(uCrop);
 
-        if (requestMode == REQUEST_SELECT_PICTURE_FOR_FRAGMENT) {
-            setupFragment(uCrop);        // build‑variant가 fragment일 때
-        } else {
-            uCrop.start(this);           // 그 밖에는 Activity로 실행
+        if (requestMode == REQUEST_SELECT_PICTURE_FOR_FRAGMENT) {       //if build variant = fragment
+            setupFragment(uCrop);
+        } else {                                                        // else start uCrop Activity
+            uCrop.start(SampleActivity.this);
         }
+
     }
 
     /**
@@ -249,37 +261,28 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
      */
     private UCrop basisConfig(@NonNull UCrop uCrop) {
         int checkedId = mRadioGroupAspectRatio.getCheckedRadioButtonId();
-
-        if (checkedId == R.id.radio_origin) {                 // 원본 비율
+        if (checkedId == R.id.radio_origin) {
             uCrop = uCrop.useSourceImageAspectRatio();
-
-        } else if (checkedId == R.id.radio_square) {          // 1 : 1
+        } else if (checkedId == R.id.radio_square) {
             uCrop = uCrop.withAspectRatio(1, 1);
-
         } else if (checkedId == R.id.radio_dynamic) {
-            // do nothing  (자유 비율)
-
-        } else {                                              // 사용자가 직접 입력
+            // do nothing
+        } else {
             try {
-                float ratioX = Float.parseFloat(
-                        mEditTextRatioX.getText().toString().trim());
-                float ratioY = Float.parseFloat(
-                        mEditTextRatioY.getText().toString().trim());
+                float ratioX = Float.valueOf(mEditTextRatioX.getText().toString().trim());
+                float ratioY = Float.valueOf(mEditTextRatioY.getText().toString().trim());
                 if (ratioX > 0 && ratioY > 0) {
                     uCrop = uCrop.withAspectRatio(ratioX, ratioY);
                 }
             } catch (NumberFormatException e) {
-                Log.i(TAG, "Number please: " + e.getMessage());
+                Log.i(TAG, String.format("Number please: %s", e.getMessage()));
             }
         }
 
-        /* ――― 최대 크기 옵션 ――― */
         if (mCheckBoxMaxSize.isChecked()) {
             try {
-                int maxWidth  = Integer.parseInt(
-                        mEditTextMaxWidth.getText().toString().trim());
-                int maxHeight = Integer.parseInt(
-                        mEditTextMaxHeight.getText().toString().trim());
+                int maxWidth = Integer.valueOf(mEditTextMaxWidth.getText().toString().trim());
+                int maxHeight = Integer.valueOf(mEditTextMaxHeight.getText().toString().trim());
                 if (maxWidth > UCrop.MIN_SIZE && maxHeight > UCrop.MIN_SIZE) {
                     uCrop = uCrop.withMaxResultSize(maxWidth, maxHeight);
                 }
@@ -303,18 +306,65 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
         int checkedId = mRadioGroupCompressionSettings.getCheckedRadioButtonId();
         if (checkedId == R.id.radio_png) {
             options.setCompressionFormat(Bitmap.CompressFormat.PNG);
-        } else {  // R.id.radio_jpeg or any other case
+        } else {
             options.setCompressionFormat(Bitmap.CompressFormat.JPEG);
         }
-
-        // 품질 설정
         options.setCompressionQuality(mSeekBarQuality.getProgress());
 
-        // 하단 컨트롤 숨김 여부
         options.setHideBottomControls(mCheckBoxHideBottomControls.isChecked());
-
-        // 자유형 크롭 허용 여부
         options.setFreeStyleCropEnabled(mCheckBoxFreeStyleCrop.isChecked());
+
+        /*
+        If you want to configure how gestures work for all UCropActivity tabs
+
+        options.setAllowedGestures(UCropActivity.SCALE, UCropActivity.ROTATE, UCropActivity.ALL);
+        * */
+
+        /*
+        This sets max size for bitmap that will be decoded from source Uri.
+        More size - more memory allocation, default implementation uses screen diagonal.
+
+        options.setMaxBitmapSize(640);
+        * */
+
+
+       /*
+
+        Tune everything (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧
+
+        options.setMaxScaleMultiplier(5);
+        options.setImageToCropBoundsAnimDuration(666);
+        options.setDimmedLayerColor(Color.CYAN);
+        options.setCircleDimmedLayer(true);
+        options.setShowCropFrame(false);
+        options.setCropGridStrokeWidth(20);
+        options.setCropGridColor(Color.GREEN);
+        options.setCropGridColumnCount(2);
+        options.setCropGridRowCount(1);
+        options.setToolbarCropDrawable(R.drawable.your_crop_icon);
+        options.setToolbarCancelDrawable(R.drawable.your_cancel_icon);
+
+        // System bars appearance
+        options.setStatusBarLight(true);
+        options.setNavigationBarLight(false);
+
+        // Color palette
+        options.setToolbarColor(ContextCompat.getColor(this, R.color.your_color_res));
+        options.setToolbarWidgetColor(ContextCompat.getColor(this, R.color.your_color_res));
+        options.setRootViewBackgroundColor(ContextCompat.getColor(this, R.color.your_color_res));
+        options.setActiveControlsWidgetColor(ContextCompat.getColor(this, R.color.your_color_res));
+
+        // Aspect ratio options
+        options.setAspectRatioOptions(2,
+            new AspectRatio("WOW", 1, 2),
+            new AspectRatio("MUCH", 3, 4),
+            new AspectRatio("RATIO", CropImageView.DEFAULT_ASPECT_RATIO, CropImageView.DEFAULT_ASPECT_RATIO),
+            new AspectRatio("SO", 16, 9),
+            new AspectRatio("ASPECT", 1, 1));
+        options.withAspectRatio(CropImageView.DEFAULT_ASPECT_RATIO, CropImageView.DEFAULT_ASPECT_RATIO);
+        options.useSourceImageAspectRatio();
+
+       */
 
         return uCrop.withOptions(options);
     }
@@ -377,13 +427,12 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
 
     public void setupViews(Bundle args) {
         settingsView.setVisibility(View.GONE);
-        mStatusBarColor = args.getInt(UCrop.Options.EXTRA_STATUS_BAR_COLOR, ContextCompat.getColor(this, R.color.ucrop_color_statusbar));
-        mToolbarColor = args.getInt(UCrop.Options.EXTRA_TOOL_BAR_COLOR, ContextCompat.getColor(this, R.color.ucrop_color_toolbar));
-        mToolbarCancelDrawable = args.getInt(UCrop.Options.EXTRA_UCROP_WIDGET_CANCEL_DRAWABLE, R.drawable.ucrop_ic_cross);
-        mToolbarCropDrawable = args.getInt(UCrop.Options.EXTRA_UCROP_WIDGET_CROP_DRAWABLE, R.drawable.ic_done);
-        mToolbarWidgetColor = args.getInt(UCrop.Options.EXTRA_UCROP_WIDGET_COLOR_TOOLBAR, ContextCompat.getColor(this, R.color.ucrop_color_toolbar_widget));
+        mToolbarColor = args.getInt(UCrop.Options.EXTRA_TOOL_BAR_COLOR, ContextCompat.getColor(this, com.yalantis.ucrop.R.color.ucrop_color_toolbar));
+        mToolbarCancelDrawable = args.getInt(UCrop.Options.EXTRA_UCROP_WIDGET_CANCEL_DRAWABLE, com.yalantis.ucrop.R.drawable.ucrop_ic_cross);
+        mToolbarCropDrawable = args.getInt(UCrop.Options.EXTRA_UCROP_WIDGET_CROP_DRAWABLE, com.yalantis.ucrop.R.drawable.ucrop_ic_done);
+        mToolbarWidgetColor = args.getInt(UCrop.Options.EXTRA_UCROP_WIDGET_COLOR_TOOLBAR, ContextCompat.getColor(this, com.yalantis.ucrop.R.color.ucrop_color_toolbar_widget));
         mToolbarTitle = args.getString(UCrop.Options.EXTRA_UCROP_TITLE_TEXT_TOOLBAR);
-        mToolbarTitle = mToolbarTitle != null ? mToolbarTitle : getResources().getString(R.string.ucrop_label_edit_photo);
+        mToolbarTitle = mToolbarTitle != null ? mToolbarTitle : getResources().getString(com.yalantis.ucrop.R.string.ucrop_label_edit_photo);
 
         setupAppBar();
     }
@@ -392,7 +441,6 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
      * Configures and styles both status bar and toolbar.
      */
     private void setupAppBar() {
-
         toolbar = findViewById(R.id.toolbar);
 
         // Set all of the Toolbar coloring
@@ -418,13 +466,29 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
         }
     }
 
+    /**
+     * Sets status-bar color for L devices.
+     *
+     * @param color - status-bar color
+     */
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    private void setStatusBarColor(@ColorInt int color) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            final Window window = getWindow();
+            if (window != null) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+                window.setStatusBarColor(color);
+            }
+        }
+    }
+
     @Override
     public boolean onCreateOptionsMenu(final Menu menu) {
-        getMenuInflater().inflate(R.menu.ucrop_menu_activity, menu);
+        getMenuInflater().inflate(com.yalantis.ucrop.R.menu.ucrop_menu_activity, menu);
 
         // Change crop & loader menu icons color to match the rest of the UI colors
 
-        MenuItem menuItemLoader = menu.findItem(R.id.menu_loader);
+        MenuItem menuItemLoader = menu.findItem(com.yalantis.ucrop.R.id.menu_loader);
         Drawable menuItemLoaderIcon = menuItemLoader.getIcon();
         if (menuItemLoaderIcon != null) {
             try {
@@ -432,13 +496,13 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
                 menuItemLoaderIcon.setColorFilter(mToolbarWidgetColor, PorterDuff.Mode.SRC_ATOP);
                 menuItemLoader.setIcon(menuItemLoaderIcon);
             } catch (IllegalStateException e) {
-                Log.i(this.getClass().getName(), String.format("%s - %s", e.getMessage(), getString(R.string.ucrop_mutate_exception_hint)));
+                Log.i(this.getClass().getName(), String.format("%s - %s", e.getMessage(), getString(com.yalantis.ucrop.R.string.ucrop_mutate_exception_hint)));
             }
             ((Animatable) menuItemLoader.getIcon()).start();
         }
 
-        MenuItem menuItemCrop = menu.findItem(R.id.menu_crop);
-        Drawable menuItemCropIcon = ContextCompat.getDrawable(this, mToolbarCropDrawable == 0 ? R.drawable.ic_done : mToolbarCropDrawable);
+        MenuItem menuItemCrop = menu.findItem(com.yalantis.ucrop.R.id.menu_crop);
+        Drawable menuItemCropIcon = ContextCompat.getDrawable(this, mToolbarCropDrawable == 0 ? com.yalantis.ucrop.R.drawable.ucrop_ic_done : mToolbarCropDrawable);
         if (menuItemCropIcon != null) {
             menuItemCropIcon.mutate();
             menuItemCropIcon.setColorFilter(mToolbarWidgetColor, PorterDuff.Mode.SRC_ATOP);
@@ -450,14 +514,14 @@ public class SampleActivity extends BaseActivity implements UCropFragmentCallbac
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        menu.findItem(R.id.menu_crop).setVisible(!mShowLoader);
-        menu.findItem(R.id.menu_loader).setVisible(mShowLoader);
+        menu.findItem(com.yalantis.ucrop.R.id.menu_crop).setVisible(!mShowLoader);
+        menu.findItem(com.yalantis.ucrop.R.id.menu_loader).setVisible(mShowLoader);
         return super.onPrepareOptionsMenu(menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == R.id.menu_crop) {
+        if (item.getItemId() == com.yalantis.ucrop.R.id.menu_crop) {
             if (fragment != null && fragment.isAdded())
                 fragment.cropAndSaveImage();
         } else if (item.getItemId() == android.R.id.home) {

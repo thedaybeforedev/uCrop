@@ -2,13 +2,13 @@ apply plugin: 'com.android.library'
 apply plugin: 'maven-publish'
 
 android {
-    namespace 'com.yalantis.ucrop'
-    compileSdk 34
+    compileSdk 36
+    namespace = "com.yalantis.ucrop"
     defaultConfig {
-        minSdkVersion 14
-        targetSdkVersion 34
+        minSdkVersion 21
+        targetSdkVersion 36
         versionCode 27
-        versionName "2.2.9-native"
+        versionName "2.2.11-native"
 
         vectorDrawables.useSupportLibrary = true
     }
@@ -18,18 +18,21 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    buildFeatures {
+        buildConfig true
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
-    }
-    lintOptions {
-        abortOnError false
     }
 
     resourcePrefix 'ucrop_'
 
     sourceSets.main {
         jni.srcDirs = []
+    }
+    lint {
+        abortOnError false
     }
 
     publishing {
@@ -38,10 +41,6 @@ android {
             withSourcesJar()
             // withJavadocJar()
         }
-    }
-
-    buildFeatures {
-        buildConfig true
     }
 
 }
@@ -63,8 +62,7 @@ dependencies {
     implementation "androidx.appcompat:appcompat:${androidx_appcompat_version}"
     implementation "androidx.exifinterface:exifinterface:${androidx_exifinterface_version}"
     implementation "androidx.transition:transition:${androidx_transition_version}"
-    // OkHttp3 versions above 3.12.x don't support pre-Lollipop Android versions (API 21)
-    implementation "com.squareup.okhttp3:okhttp:3.12.13"
+    implementation "com.squareup.okhttp3:okhttp:${okhttp_version}"
     implementation "androidx.activity:activity-ktx:1.8.2"
     implementation "androidx.core:core-ktx:1.12.0"
 }

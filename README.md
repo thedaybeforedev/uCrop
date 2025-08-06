@@ -18,15 +18,14 @@
 	```
 	allprojects {
 	   repositories {
-	      jcenter()
 	      maven { url "https://jitpack.io" }
 	   }
 	}
 	```
 
-    ``` implementation 'com.github.yalantis:ucrop:2.2.10' ``` - lightweight general solution
+    ``` implementation 'com.github.yalantis:ucrop:2.2.11' ``` - lightweight general solution
 
-    ``` implementation 'com.github.yalantis:ucrop:2.2.9-native' ``` - get power of the native code to preserve image quality (+ about 1.5 MB to an apk size)
+    ``` implementation 'com.github.yalantis:ucrop:2.2.11-native' ``` - get power of the native code to preserve image quality (+ about 1.5 MB to an apk size)
 
 2. Add UCropActivity into your AndroidManifest.xml
 
@@ -37,27 +36,27 @@
         android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
     ```
 
-3. The uCrop configuration is created using the builder pattern.
+3. Register a callback for the uCrop result.
+
+    ```java
+    private ActivityResultLauncher<Intent> activityResultLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    final Uri resultUri = UCrop.getOutput(result.getData());
+                } else if (result.getResultCode() == UCrop.RESULT_ERROR) {
+                    final Throwable cropError = UCrop.getError(result.getData());
+                }
+            });
+    ```
+
+4. Create the uCrop configuration using the builder pattern.
 
    ```java
    UCrop.of(sourceUri, destinationUri)
        .withAspectRatio(16, 9)
        .withMaxResultSize(maxWidth, maxHeight)
-       .start(context);
+       .start(context, activityResultLauncher);
    ```
-
-4. Override `onActivityResult` method and handle uCrop result.
-
-    ```java
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (resultCode == RESULT_OK && requestCode == UCrop.REQUEST_CROP) {
-            final Uri resultUri = UCrop.getOutput(data);
-        } else if (resultCode == UCrop.RESULT_ERROR) {
-            final Throwable cropError = UCrop.getError(data);
-        }
-    }
-    ```
 
 5. You may want to add this to your PROGUARD config:
 
@@ -87,11 +86,18 @@ Currently, you can change:
 
 # Compatibility
 
-  * Library - Android ICS 4.0+ (API 14) (Android GINGERBREAD 2.3+ (API 10) for versions <= 1.3.2)
-  * Sample - Android ICS 4.0+ (API 14)
-  * CPU - armeabi armeabi-v7a x86 x86_64 arm64-v8a (for versions >= 2.1.2)
+  * Library - Android Lollipop 5.0+ (API 21) (Android ICS 4.0+ (API 14) for versions < 2.2.11)
+  * Sample - Android Lollipop 5.0+ (API 21)
+  * CPU - armeabi-v7a x86 x86_64 arm64-v8a (for versions >= 2.2.11)
 
 # Changelog
+
+### Version: 2.2.11
+
+*   Updated compileSdk and targetSdk to 36
+*   Added support for 16 KB page sizes
+*   Enabled edge-to-edge UI support
+*   And other improvements
 
 ### Version: 2.2.10
 
@@ -111,7 +117,6 @@ Currently, you can change:
 *   Add localizations
 *   Fixed [#609](https://github.com/Yalantis/uCrop/issues/609)
 *   Fixed [#794](https://github.com/Yalantis/uCrop/issues/794)
-
 
 ### Version: 2.2.5
 
@@ -136,8 +141,8 @@ Currently, you can change:
 
 ### Version: 2.2.2
 
-* uCrop fragment added
-* bugfix
+  * uCrop fragment added
+  * bugfix
 
 ### Version: 2.2.1
 
